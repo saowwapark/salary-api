@@ -1,33 +1,36 @@
 import { RowDataPacket, format } from "mysql2/promise";
 import {
   SqlWhere,
-  SalarySurveyDto,
+  SalarySurveyApiModel,
   SqlFragment,
   SqlOrder,
+  SalarySurveyModel,
+  SalarySurveyDto,
+  SqlSelect
 } from "./../dto/salary-survey.dto";
 import { dbPool } from "../config/db.config";
 
 export class SalarySurveyDao {
   private parse(salarySurvey: SalarySurveyDto) {
-    const salarySurveyDto: SalarySurveyDto = {
-      timeStamp: salarySurvey.timeStamp || undefined,
-      employer: salarySurvey.employer || undefined,
-      location: salarySurvey.location || undefined,
-      jobTitle: salarySurvey.jobTitle || undefined,
-      yearsAtEmployer: salarySurvey.yearsAtEmployer || undefined,
-      yearsOfExperience: salarySurvey.yearsOfExperience || undefined,
-      salary: salarySurvey.salary || undefined,
-      signingBonus: salarySurvey.signingBonus || undefined,
-      annualBonus: salarySurvey.annualBonus || undefined,
-      annualStockValue: salarySurvey.annualStockValue || undefined,
-      gender: salarySurvey.gender || undefined,
-      additionalComment: salarySurvey.additionalComment || undefined,
+    const salarySurveyModel: SalarySurveyModel = {
+      timeStamp: salarySurvey['Timestamp'] || undefined,
+      employer: salarySurvey['Employer'] || undefined,
+      location: salarySurvey['Location'] || undefined,
+      jobTitle: salarySurvey['Job Title'] || undefined,
+      yearsAtEmployer: salarySurvey['Years at Employer'] || undefined,
+      yearsOfExperience: salarySurvey['Years of Experience'] || undefined,
+      salary: salarySurvey['Salary'] || undefined,
+      signingBonus: salarySurvey['Signing Bonus'] || undefined,
+      annualBonus: salarySurvey['Annual Bonus'] || undefined,
+      annualStockValue: salarySurvey['Annual Stock Value/Bonus'] || undefined,
+      gender: salarySurvey['Gender'] || undefined,
+      additionalComment: salarySurvey['Additional Comments'] || undefined,
     };
-    return salarySurveyDto;
+    return salarySurveyModel;
   }
 
   private parseAll(rows: SalarySurveyDto[]) {
-    const salalrySurveys: SalarySurveyDto[] = [];
+    const salalrySurveys: SalarySurveyModel[] = [];
     rows.forEach((row: SalarySurveyDto) => {
       const salarySurvey = this.parse(row);
       salalrySurveys.push(salarySurvey);
@@ -40,7 +43,7 @@ export class SalarySurveyDao {
     const wheres: string[] = [];
 
     sqlFilters.forEach((data) => {
-      wheres.push(`${data.field} ${data.operator} ${data.value}`);
+      wheres.push(`\`${data.dbField}\` ${data.operator} '${data.value}'`);
     });
     if (wheres.length > 0) {
       whereStatment = `WHERE ${wheres.join(", ")}`;
@@ -53,7 +56,7 @@ export class SalarySurveyDao {
     const sorts: string[] = [];
 
     sqlSorts.forEach((data) => {
-      sorts.push(`${data.sortField} ${data.sortType}`);
+      sorts.push(`\`${data.dbField}\` ${data.sortType}`);
     });
     if (sorts.length > 0) {
       sortStatement = `ORDER BY ${sorts.join(", ")}`;
@@ -61,8 +64,13 @@ export class SalarySurveyDao {
     return sortStatement;
   }
 
+  private getColumnStatment(columns: SqlSelect[]) {
+    const newColomns = columns.map(column => `\`${column}\``)
+    return newColomns.join(', ');
+  }
+
   public async query(sqlFragment: SqlFragment) {
-    const columns = sqlFragment.sqlSelects.join(", ");
+    const columns = this.getColumnStatment(sqlFragment.sqlSelects);
     const whereStatement = this.getWhereStatement(sqlFragment.sqlWheres);
     const sortStatment = this.getOrderStatement(sqlFragment.sqlOrders);
 
